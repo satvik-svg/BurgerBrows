@@ -1,0 +1,23 @@
+{
+  "network": "sepolia",
+  "chainId": 11155111,
+  "rpcUrl": "https://eth-sepolia.g.alchemy.com/v2/wvPB7N5GFQnyBB2FRL9L9",
+  "contracts": {
+    "MockUSDC": {
+      "address": "0xE32f7a8eB4Fb132675292306A5928071d126F082",
+      "abi": "MockUSDC.json"
+    },
+    "BrowserVault": {
+      "address": "0x9dAE42f31DB601fD0094c05d5b52Eb0a3074f786",
+      "abi": "BrowserVault.json"
+    },
+    "RewardPool": {
+      "address": "0xc7Fd8EF7Ee3e93e8eff2E12715E504aDfbaE3750",
+      "abi": "RewardPool.json"
+    }
+  },
+  "wallet": {
+    "address": "0x1f95Fe3186aCc2BcA155D239Be36dD2B8Fb6e795",
+    "privateKey": "0x05b40792c4a08ab87063e304a619f586921473c6bd74834e322a9fc202951eec"
+  }
+}
