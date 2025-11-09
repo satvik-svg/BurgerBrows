@@ -690,9 +690,9 @@ class RealMultiUserBrowser(QMainWindow if GUI_AVAILABLE else object):
     def create_phantom_buttons(self, layout):
         """Create DeFi action buttons (corrected names)"""
         button_container = QWidget()
-        button_layout = QHBoxLayout(button_container)
+        button_layout = QGridLayout(button_container)  # Changed to grid layout
         button_layout.setContentsMargins(0, 0, 0, 0)
-        button_layout.setSpacing(12)
+        button_layout.setSpacing(8)  # Reduced spacing
         
         # Button style (Phantom-like)
         button_style = """
@@ -701,10 +701,11 @@ class RealMultiUserBrowser(QMainWindow if GUI_AVAILABLE else object):
                 color: white;
                 border: none;
                 border-radius: 12px;
-                padding: 16px;
-                font-size: 13px;
+                padding: 12px 8px;
+                font-size: 11px;
                 font-weight: 500;
-                min-height: 60px;
+                min-height: 50px;
+                min-width: 70px;
             }
             QPushButton:hover {
                 background-color: #4A4A52;
@@ -714,26 +715,32 @@ class RealMultiUserBrowser(QMainWindow if GUI_AVAILABLE else object):
             }
         """
         
-        # Create 4 DeFi action buttons with correct names
+        # Create DeFi action buttons with correct names
         balance_btn = QPushButton("💰\nBalance")
         balance_btn.setStyleSheet(button_style)
         balance_btn.clicked.connect(self.check_real_balance_and_sync)
-        button_layout.addWidget(balance_btn)
+        button_layout.addWidget(balance_btn, 0, 0)  # Row 0, Column 0
         
         deposit_btn = QPushButton("🏦\nDeposit") 
         deposit_btn.setStyleSheet(button_style)
         deposit_btn.clicked.connect(self.deposit_real_usdc)
-        button_layout.addWidget(deposit_btn)
+        button_layout.addWidget(deposit_btn, 0, 1)  # Row 0, Column 1
         
         yield_btn = QPushButton("📈\nYield")
         yield_btn.setStyleSheet(button_style)
         yield_btn.clicked.connect(self.generate_real_yield)
-        button_layout.addWidget(yield_btn)
+        button_layout.addWidget(yield_btn, 0, 2)  # Row 0, Column 2
         
-        claim_btn = QPushButton("🎁\nRewards")
+        claim_btn = QPushButton("🎁\nReward")
         claim_btn.setStyleSheet(button_style)
         claim_btn.clicked.connect(self.claim_real_rewards)
-        button_layout.addWidget(claim_btn)
+        button_layout.addWidget(claim_btn, 1, 0)  # Row 1, Column 0
+        
+        # Add faucet button for getting test USDC
+        faucet_btn = QPushButton("🚰\nFaucet")
+        faucet_btn.setStyleSheet(button_style)
+        faucet_btn.clicked.connect(self.get_test_usdc_from_faucet)
+        button_layout.addWidget(faucet_btn, 1, 1)  # Row 1, Column 1
         
         layout.addWidget(button_container)
         
@@ -741,6 +748,7 @@ class RealMultiUserBrowser(QMainWindow if GUI_AVAILABLE else object):
         """Create simplified token display showing only USDC"""
         # Token section header
         tokens_header = QLabel("Balance")
+        tokens_header.setObjectName("balance_header")  # Add object name
         tokens_header.setStyleSheet("""
             QLabel {
                 color: #FFFFFF;
@@ -916,18 +924,22 @@ class RealMultiUserBrowser(QMainWindow if GUI_AVAILABLE else object):
                     
                     if content_widget:
                         content_layout = content_widget.layout()
-                        # Find and remove old token list, then add new one
+                        # Find and remove old token list and headers, then add new ones
+                        items_to_remove = []
                         for i in range(content_layout.count()):
                             item = content_layout.itemAt(i)
                             if item and item.widget():
                                 widget = item.widget()
-                                if hasattr(widget, 'objectName') and widget.objectName() == "token_list":
-                                    content_layout.removeWidget(widget)
-                                    widget.deleteLater()
+                                if hasattr(widget, 'objectName') and widget.objectName() in ["token_list", "balance_header"]:
+                                    items_to_remove.append(widget)
+                        
+                        # Remove old items
+                        for widget in items_to_remove:
+                            content_layout.removeWidget(widget)
+                            widget.deleteLater()
                                     
-                                    # Add updated token list
-                                    self.create_token_list(content_layout)
-                                    break
+                        # Add updated token list
+                        self.create_token_list(content_layout)
             except Exception as e:
                 print(f"⚠️ Error updating token list in popup: {e}")
                 
@@ -1269,6 +1281,91 @@ class RealMultiUserBrowser(QMainWindow if GUI_AVAILABLE else object):
                     
         except Exception as e:
             self.log_message(f"❌ Real reward error: {e}")
+
+    def get_test_usdc_from_faucet(self):
+        """Get test USDC from faucet for testing"""
+        try:
+            self.log_message(f"🚰 Getting test USDC from faucet...")
+            self.log_message(f"📍 Wallet: {self.wallet_address}")
+            
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Icon.Question)
+            msg.setWindowTitle("🚰 MockUSDC Faucet")
+            msg.setText(f"Get test USDC from faucet?")
+            msg.setInformativeText(f"This will:\n"
+                                  f"• Mint 100 test USDC tokens\n"
+                                  f"• Send to YOUR wallet: {self.wallet_address[:20]}...\n"
+                                  f"• Use real gas fees on Sepolia\n"
+                                  f"• Perfect for testing DeFi functions!")
+            msg.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+            
+            if msg.exec() == QMessageBox.StandardButton.Yes:
+                self.log_message(f"🪙 Minting 100 test USDC to your wallet...")
+                
+                # Import contracts and wallet to access minting
+                from contracts import BurgerBrowsContracts
+                
+                # Create contracts instance 
+                contracts = BurgerBrowsContracts()
+                
+                # Custom mint function that mints to user's specific wallet
+                result = self.mint_usdc_to_user_wallet(contracts, 100.0)
+                
+                if result:
+                    self.log_message(f"✅ Successfully minted 100 test USDC!")
+                    self.log_message(f"🔗 Transaction: {result[:20]}...")
+                    self.log_message(f"💰 USDC sent to your wallet: {self.wallet_address[:20]}...")
+                    
+                    # Reload balance after a delay
+                    QTimer.singleShot(3000, self.check_real_balance)
+                else:
+                    self.log_message(f"❌ Faucet minting failed")
+                    self.log_message(f"💡 Make sure you have ETH for gas fees!")
+                    
+        except Exception as e:
+            self.log_message(f"❌ Faucet error: {e}")
+
+    def mint_usdc_to_user_wallet(self, contracts, amount: float) -> str:
+        """Custom mint function that mints USDC to the specific user's wallet"""
+        try:
+            # MockUSDC mint function ABI
+            mint_abi = [
+                {
+                    "inputs": [
+                        {"name": "to", "type": "address"},
+                        {"name": "amount", "type": "uint256"}
+                    ],
+                    "name": "mint",
+                    "outputs": [],
+                    "stateMutability": "nonpayable",
+                    "type": "function"
+                }
+            ]
+            
+            # Calculate amount with 6 decimals (USDC standard)
+            amount_with_decimals = int(amount * 10**6)
+            
+            self.log_message(f"🎯 Minting {amount} USDC to: {self.wallet_address}")
+            
+            # Use the contracts wallet to mint to the user's wallet address
+            tx_hash = contracts.wallet.call_contract_function(
+                contracts.usdc_address,
+                mint_abi,
+                "mint",
+                [self.wallet_address, amount_with_decimals]  # Mint to user's wallet, not contract wallet
+            )
+            
+            if tx_hash:
+                receipt = contracts.wallet.wait_for_transaction(tx_hash)
+                if receipt and receipt.get('status') == 1:
+                    self.log_message(f"✅ USDC minted to {self.wallet_address}")
+                    return tx_hash
+            
+            return None
+            
+        except Exception as e:
+            self.log_message(f"❌ Error in custom mint: {e}")
+            return None
 
 def main():
     """Main application entry point"""
